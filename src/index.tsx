@@ -3,7 +3,7 @@ import './styles/global.css'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 
-import App from './components/App/App'
+import Main from './main/Main'
 import reportWebVitals from './reportWebVitals'
 import * as serviceWorkerRegistration from './serviceWorkerRegistration'
 
@@ -11,7 +11,7 @@ const container = document.getElementById('root')
 const root = createRoot(container!)
 root.render(
   <React.StrictMode>
-    <App />
+    <Main />
   </React.StrictMode>
 )
 

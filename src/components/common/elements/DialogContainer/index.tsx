@@ -1,13 +1,55 @@
+/* eslint-disable array-callback-return */
+import { Camera, CameraResultType } from '@capacitor/camera'
 import { Dialog, Transition } from '@headlessui/react'
+import { Button, ColorPicker, Divider, Slider, Stack, Text, TextInput } from '@mantine/core'
 import type { FC } from 'react'
-import { Fragment } from 'react'
+import React, { Fragment } from 'react'
+import type { HeaderItemType, HeaderType } from 'src/types/schemas'
 
 type DialogTypes = {
   isOpen: boolean
   closeModal: () => void
+  componentState: HeaderType
+  handleComponentStateChange: (state: HeaderType) => void
 }
 
-const DialogBox: FC<DialogTypes> = ({ isOpen, closeModal }) => {
+const DialogBox: FC<DialogTypes> = ({
+  isOpen,
+  closeModal,
+  componentState,
+  handleComponentStateChange
+}) => {
+  function handleChange(key: 'field' | 'fontSize' | 'color' | 'avatar', value: any, index: number) {
+    const state = [...componentState]
+    const itemToUpdate = state[index]
+    if (key === 'field') {
+      // @ts-ignore
+      itemToUpdate[key].value = value
+    } else {
+      itemToUpdate[key] = value as never
+    }
+
+    handleComponentStateChange(state)
+  }
+  const takePicture = async (index: number) => {
+    const permission = await Camera.checkPermissions()
+    if (!permission) {
+      Camera.requestPermissions()
+    }
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: true,
+      resultType: CameraResultType.Uri
+    })
+    // image.webPath will contain a path that can be set as an image src.
+    // You can access the original file using image.path, which can be
+    // passed to the Filesystem API to read the raw data of the image,
+    // if desired (or pass resultType: CameraResultType.Base64 to getPhoto)
+    const imageUrl = image.webPath
+
+    // Can be set to the src of an image now
+    handleChange('avatar', imageUrl, index)
+  }
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-10" onClose={closeModal}>
@@ -34,26 +76,79 @@ const DialogBox: FC<DialogTypes> = ({ isOpen, closeModal }) => {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
+              <Dialog.Panel className="w-[90%] max-w-md overflow-hidden rounded-2xl bg-white p-4 text-left align-middle shadow-xl transition-all">
+                <Dialog.Title as="h3" className=" text-lg font-medium text-gray-900">
                   Payment successful
                 </Dialog.Title>
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">
-                    Your payment has been successfully submitted. We’ve sent you an email with all
-                    of the details of your order.
-                  </p>
-                </div>
 
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    className="inline-flex justify-center rounded-md border border-transparent bg-blue-100 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                    onClick={closeModal}
-                  >
-                    Got it, thanks!
-                  </button>
-                </div>
+                {componentState.map((element: HeaderItemType, stateIndex: number) => {
+                  return Object.keys(element).map((item) => {
+                    const el = item as 'field' | 'fontSize' | 'color'
+                    const value = element[el] as string
+                    if (item === 'field' && element.field) {
+                      return (
+                        <Stack spacing="xs" mt="lg">
+                          <Text>Font Size</Text>
+                          <TextInput
+                            styles={() => ({
+                              root: {},
+                              input: {
+                                color: element.color,
+                                fontSize: element.fontSize,
+                                textTransform: 'uppercase'
+                              }
+                            })}
+                            variant="unstyled"
+                            size="md"
+                            value={element!.field.value}
+                            onChange={(e) => handleChange(item, e.target.value, stateIndex)}
+                            name={item}
+                          />
+                          <Divider />
+                        </Stack>
+                      )
+                    }
+                    if (item === 'fontSize') {
+                      const val = Number(value)
+                      return (
+                        <Stack spacing="xs" mt="lg">
+                          <Text>Font Size</Text>
+                          <Slider
+                            value={val}
+                            onChange={(targetVal) => handleChange(item, targetVal, stateIndex)}
+                            min={4}
+                            max={44}
+                          />
+                          <Divider />
+                        </Stack>
+                      )
+                    }
+                    if (item === 'color') {
+                      return (
+                        <Stack spacing="xs">
+                          <Text>Text Color</Text>
+                          <ColorPicker
+                            value={value}
+                            onChange={(targetVal) => handleChange(item, targetVal, stateIndex)}
+                          />
+                          <Divider />
+                        </Stack>
+                      )
+                    }
+                    if (item === 'avatar') {
+                      return (
+                        <Stack spacing="xs">
+                          <Text>Text Avatar</Text>
+                          <Button onClick={() => takePicture(stateIndex)}>Pick Image</Button>
+                          <img src={value} />
+                          <Divider />
+                        </Stack>
+                      )
+                    }
+
+                    return <Divider />
+                  })
+                })}
               </Dialog.Panel>
             </Transition.Child>
           </div>
